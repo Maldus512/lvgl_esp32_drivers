@@ -19,6 +19,7 @@
 */
 
 #include <esp_log.h>
+#include <driver/gpio.h>
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE
 #include <lvgl.h>
 #else
@@ -88,6 +89,17 @@ void ft6x06_init(uint16_t dev_addr) {
     ft6x06_i2c_read8(dev_addr, FT6X36_RELEASECODE_REG, &data_buf);
     ESP_LOGI(TAG, "\tRelease code: 0x%02x", data_buf);
     
+    #if CONFIG_LV_FT6X36_ENABLE_IRQ
+    gpio_config_t config = {
+        .intr_type = GPIO_INTR_DISABLE,
+        .mode = GPIO_MODE_INPUT,
+        .pin_bit_mask = BIT(CONFIG_LV_FT6X36_IRQ_IO),
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&config));
+    #endif
+    
 #if CONFIG_LV_FT6X36_COORDINATES_QUEUE
     ft6x36_touch_queue_handle = xQueueCreate( FT6X36_TOUCH_QUEUE_ELEMENTS, sizeof( ft6x36_touch_t ) );
     if( ft6x36_touch_queue_handle == NULL )
@@ -110,6 +122,14 @@ bool ft6x36_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
         ESP_LOGE(TAG, "Init first!");
         return 0x00;
     }
+
+    #if CONFIG_LV_FT6X36_ENABLE_IRQ
+    // No touch present
+    if (gpio_get_level(CONFIG_LV_FT6X36_IRQ_IO) == 0) {
+        return 0x00;
+    }
+    #endif
+
     uint8_t data_buf[5];        // 1 byte status, 2 bytes X, 2 bytes Y
 
     esp_err_t ret = lvgl_i2c_read(CONFIG_LV_I2C_TOUCH_PORT, current_dev_addr, FT6X36_TD_STAT_REG, &data_buf[0], 5);
