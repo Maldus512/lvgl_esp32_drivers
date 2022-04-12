@@ -43,6 +43,12 @@ static esp_err_t ft6x06_i2c_read8(uint8_t slave_addr, uint8_t register_addr, uin
     return lvgl_i2c_read(CONFIG_LV_I2C_TOUCH_PORT, slave_addr, register_addr, data_buf, 1);
 }
 
+
+static esp_err_t ft6x06_i2c_write8(uint8_t slave_addr, uint8_t register_addr, uint8_t data) {
+    return lvgl_i2c_write(CONFIG_LV_I2C_TOUCH_PORT, slave_addr, register_addr, &data, 1);
+}
+
+
 /**
   * @brief  Read the FT6x36 gesture ID. Initialize first!
   * @param  dev_addr: I2C FT6x36 Slave address.
@@ -88,8 +94,10 @@ void ft6x06_init(uint16_t dev_addr) {
 
     ft6x06_i2c_read8(dev_addr, FT6X36_RELEASECODE_REG, &data_buf);
     ESP_LOGI(TAG, "\tRelease code: 0x%02x", data_buf);
-    
+
     #if CONFIG_LV_FT6X36_ENABLE_IRQ
+    ft6x06_i2c_write8(dev_addr, FT6X36_G_MODE_REG, FT6X36_INTERRUPT_POLLING_MODE);
+
     gpio_config_t config = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_INPUT,
@@ -125,7 +133,7 @@ bool ft6x36_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
 
     #if CONFIG_LV_FT6X36_ENABLE_IRQ
     // No touch present
-    if (gpio_get_level(CONFIG_LV_FT6X36_IRQ_IO) == 0) {
+    if (gpio_get_level(CONFIG_LV_FT6X36_IRQ_IO) == 1) {
         return 0x00;
     }
     #endif

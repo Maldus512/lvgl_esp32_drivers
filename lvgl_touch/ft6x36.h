@@ -138,11 +138,15 @@ extern "C" {
 
 #define FT6X36_CHIPSELECT_REG            0xA3       /* 0x36 for ft6236; 0x06 for ft6206 */
 
+#define FT6X36_G_MODE_REG                0xA4       /* Interrupt working mode */
 #define FT6X36_POWER_MODE_REG            0xA5
 #define FT6X36_FIRMWARE_ID_REG           0xA6
 #define FT6X36_RELEASECODE_REG           0xAF
 #define FT6X36_PANEL_ID_REG              0xA8
 #define FT6X36_OPMODE_REG                0xBC
+
+#define FT6X36_INTERRUPT_POLLING_MODE    0x00
+#define FT6X36_INTERRUPT_TRIGGER_MODE    0x01
 
 
 typedef struct {
