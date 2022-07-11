@@ -455,6 +455,28 @@ menu "LVGL Touch controller"
     menu "Touchpanel Configuration (GT911)"
         depends on LV_TOUCH_CONTROLLER_GT911
 
+    config LV_GT911_ENABLE_RESET
+        bool
+        prompt "Enable GT911 reset control"
+        default n
+
+    config LV_GT911_RESET_IO
+        int
+        depends on LV_GT911_ENABLE_RESET
+        prompt "GT911 IRQ reset IO"
+        default -1
+
+    config LV_GT911_ENABLE_IRQ
+        bool
+        prompt "Enable GT911 IRQ signal"
+        default n
+
+    config LV_GT911_IRQ_IO
+        int
+        depends on LV_GT911_ENABLE_IRQ
+        prompt "GT911 IRQ signal IO"
+        default -1
+
     config LV_GT911_SWAPXY
         bool
         prompt "Swap X with Y coordinate."

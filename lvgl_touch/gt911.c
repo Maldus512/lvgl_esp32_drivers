@@ -81,6 +81,32 @@ void gt911_init(uint8_t dev_addr) {
         gt911_status.max_y_coord |= ((uint16_t)data_buf << 8);
         ESP_LOGI(TAG, "\tY Resolution: %d", gt911_status.max_y_coord);
         gt911_status.inited = true;
+
+        #if CONFIG_LV_GT911_ENABLE_IRQ
+        gpio_config_t irq_config = {
+            .intr_type = GPIO_INTR_DISABLE,
+            .mode = GPIO_MODE_INPUT,
+            .pin_bit_mask = BIT(CONFIG_LV_GT911_IRQ_IO),
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+        };
+        ESP_ERROR_CHECK(gpio_config(&irq_config));
+        #endif
+
+        #if CONFIG_LV_GT911_ENABLE_RESET
+        gpio_config_t reset_config = {
+            .intr_type = GPIO_INTR_DISABLE,
+            .mode = GPIO_MODE_INPUT,
+            .pin_bit_mask = BIT(CONFIG_LV_GT911_RESET_IO),
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+        };
+        ESP_ERROR_CHECK(gpio_config(&reset_config));
+
+        gpio_set_level(CONFIG_LV_GT911_RESET_IO, 0);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        gpio_set_level(CONFIG_LV_GT911_RESET_IO, 1);
+        #endif
     }
 }
 
@@ -96,6 +122,13 @@ bool gt911_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
     static int16_t last_y = 0;  // 12bit pixel value
     uint8_t data_buf;
     uint8_t status_reg;
+
+    #if CONFIG_LV_GT911_ENABLE_IRQ
+    // No touch present
+    if (gpio_get_level(CONFIG_LV_GT911_IRQ_IO) == 1) {
+        //return 0x00;
+    }
+    #endif
 
     gt911_i2c_read(gt911_status.i2c_dev_addr, GT911_STATUS_REG, &status_reg, 1);
 //    ESP_LOGI(TAG, "\tstatus: 0x%02x", status_reg);
@@ -138,7 +171,6 @@ bool gt911_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
     data->point.x = last_x;
     data->point.y = last_y;
     data->state = LV_INDEV_STATE_PR;
-    ESP_LOGI(TAG, "X=%u Y=%u", data->point.x, data->point.y);
     ESP_LOGV(TAG, "X=%u Y=%u", data->point.x, data->point.y);
     return false;
 }

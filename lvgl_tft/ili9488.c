@@ -71,6 +71,7 @@ void ili9488_init(void)
 		{ILI9488_CMD_WRITE_CTRL_DISPLAY, {0x28}, 1},
 		{ILI9488_CMD_WRITE_DISPLAY_BRIGHTNESS, {0x7F}, 1},
 		{ILI9488_CMD_ADJUST_CONTROL_3, {0xA9, 0x51, 0x2C, 0x02}, 4},
+		{ILI9488_CMD_DISP_INVERSION_ON, {0x00}, 0x80},
 		{ILI9488_CMD_DISPLAY_ON, {0x00}, 0x80},
 		{0, {0}, 0xff},
 	};
@@ -121,7 +122,7 @@ void ili9488_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * col
         mybuf = (uint8_t *) heap_caps_malloc(3 * (size + 2) * sizeof(uint8_t), MALLOC_CAP_DMA);
         if (mybuf == NULL) {
             ESP_LOGW(TAG, "Could not allocate enough DMA memory!");
-            vTaskDelay(1);
+            vTaskDelay(pdMS_TO_TICKS(10));
         } 
     } while (mybuf == NULL);
 
