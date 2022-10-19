@@ -75,9 +75,9 @@ typedef struct {
 /**
   * @brief  Initialize for GT911 communication via I2C
   * @param  dev_addr: Device address on communication Bus (I2C slave address of GT911).
-  * @retval None
+  * @retval 0 in case of success, true otherwise
   */
-void gt911_init(uint8_t dev_addr);
+int gt911_init(uint8_t dev_addr);
 
 /**
   * @brief  Get the touch screen X and Y positions values. Ignores multi touch
