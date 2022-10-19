@@ -117,14 +117,21 @@ void ili9488_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * col
     uint32_t size = lv_area_get_width(area) * lv_area_get_height(area);
 
     lv_color16_t *buffer_16bit = (lv_color16_t *) color_map;
+
+#ifdef CONFIG_TFT_DRIVER_STATIC_BUFFER
+    static uint8_t mybuf[3 * (DISP_BUF_SIZE + 2)] = {0};
+#else
     uint8_t *mybuf;
     do {
-        mybuf = (uint8_t *) heap_caps_malloc(3 * (size + 2) * sizeof(uint8_t), MALLOC_CAP_DMA);
+        size_t dma_transfer_size = 3 * (size + 2) * sizeof(uint8_t);
+        mybuf = (uint8_t *) heap_caps_malloc(dma_transfer_size, MALLOC_CAP_DMA);
+
         if (mybuf == NULL) {
-            ESP_LOGW(TAG, "Could not allocate enough DMA memory!");
+            ESP_LOGW(TAG, "Could not allocate enough DMA memory, required %zu bytes", dma_transfer_size);
             vTaskDelay(pdMS_TO_TICKS(10));
         } 
     } while (mybuf == NULL);
+#endif
 
     uint32_t LD = 0;
     uint32_t j = 0;
@@ -167,7 +174,9 @@ void ili9488_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * col
 	ili9488_send_cmd(ILI9488_CMD_MEMORY_WRITE);
 
 	ili9488_send_color((void *) mybuf, size * 3);
+#ifndef CONFIG_TFT_DRIVER_STATIC_BUFFER
 	heap_caps_free(mybuf);
+#endif
 }
 
 /**********************

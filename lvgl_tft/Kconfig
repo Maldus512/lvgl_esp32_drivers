@@ -363,6 +363,11 @@ menu "LVGL TFT Display controller"
         help
             See Display buffer on LVGL docs for more information.
 
+    config TFT_DRIVER_STATIC_BUFFER
+        bool "Use a statically allocated buffer for the TFT driver transfers"
+        help
+            Use a statically allocated buffer for the TFT driver transfer operations
+
     # Select one of the available FT81x configurations.
     choice
         prompt "Select a FT81x configuration." if LV_TFT_DISPLAY_USER_CONTROLLER_FT81X

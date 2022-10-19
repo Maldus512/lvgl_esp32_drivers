@@ -30,7 +30,7 @@
 
 #define TAG "GT911"
 
-gt911_status_t gt911_status;
+static gt911_status_t gt911_status = {0};
 
 //TODO: handle multibyte read and refactor to just one read transaction
 esp_err_t gt911_i2c_read(uint8_t slave_addr, uint16_t register_addr, uint8_t *data_buf, uint8_t len) {
@@ -48,66 +48,65 @@ esp_err_t gt911_i2c_write8(uint8_t slave_addr, uint16_t register_addr, uint8_t d
   * @retval None
   */
 void gt911_init(uint8_t dev_addr) {
-    if (!gt911_status.inited) {
-        gt911_status.i2c_dev_addr = dev_addr;
-        uint8_t data_buf;
-        esp_err_t ret;
+    #if CONFIG_LV_GT911_ENABLE_RESET
+    gpio_config_t reset_config = {
+        .intr_type = GPIO_INTR_DISABLE,
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = BIT(CONFIG_LV_GT911_RESET_IO),
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&reset_config));
 
-        ESP_LOGI(TAG, "Checking for GT911 Touch Controller");
-        if ((ret = gt911_i2c_read(dev_addr, GT911_PRODUCT_ID1, &data_buf, 1) != ESP_OK)) {
-            ESP_LOGE(TAG, "Error reading from device: %s",
-                        esp_err_to_name(ret));    // Only show error the first time
-            return;
-        }
+    ESP_LOGI(TAG, "Reset");
+    gpio_set_level(CONFIG_LV_GT911_RESET_IO, 0);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    gpio_set_level(CONFIG_LV_GT911_RESET_IO, 1);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    #endif
 
-        // Read 4 bytes for Product ID in ASCII
-        for (int i = 0; i < GT911_PRODUCT_ID_LEN; i++) {
-            gt911_i2c_read(dev_addr, (GT911_PRODUCT_ID1 + i), (uint8_t *)&(gt911_status.product_id[i]), 1);
-        }
-        ESP_LOGI(TAG, "\tProduct ID: %s", gt911_status.product_id);
+    gt911_status.i2c_dev_addr = dev_addr;
+    uint8_t data_buf;
+    esp_err_t ret;
 
-        gt911_i2c_read(dev_addr, GT911_VENDOR_ID, &data_buf, 1);
-        ESP_LOGI(TAG, "\tVendor ID: 0x%02x", data_buf);
-
-        gt911_i2c_read(dev_addr, GT911_X_COORD_RES_L, &data_buf, 1);
-        gt911_status.max_x_coord = data_buf;
-        gt911_i2c_read(dev_addr, GT911_X_COORD_RES_H, &data_buf, 1);
-        gt911_status.max_x_coord |= ((uint16_t)data_buf << 8);
-        ESP_LOGI(TAG, "\tX Resolution: %d", gt911_status.max_x_coord);
-
-        gt911_i2c_read(dev_addr, GT911_Y_COORD_RES_L, &data_buf, 1);
-        gt911_status.max_y_coord = data_buf;
-        gt911_i2c_read(dev_addr, GT911_Y_COORD_RES_H, &data_buf, 1);
-        gt911_status.max_y_coord |= ((uint16_t)data_buf << 8);
-        ESP_LOGI(TAG, "\tY Resolution: %d", gt911_status.max_y_coord);
-        gt911_status.inited = true;
-
-        #if CONFIG_LV_GT911_ENABLE_IRQ
-        gpio_config_t irq_config = {
-            .intr_type = GPIO_INTR_DISABLE,
-            .mode = GPIO_MODE_INPUT,
-            .pin_bit_mask = BIT(CONFIG_LV_GT911_IRQ_IO),
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-        };
-        ESP_ERROR_CHECK(gpio_config(&irq_config));
-        #endif
-
-        #if CONFIG_LV_GT911_ENABLE_RESET
-        gpio_config_t reset_config = {
-            .intr_type = GPIO_INTR_DISABLE,
-            .mode = GPIO_MODE_INPUT,
-            .pin_bit_mask = BIT(CONFIG_LV_GT911_RESET_IO),
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-        };
-        ESP_ERROR_CHECK(gpio_config(&reset_config));
-
-        gpio_set_level(CONFIG_LV_GT911_RESET_IO, 0);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        gpio_set_level(CONFIG_LV_GT911_RESET_IO, 1);
-        #endif
+    ESP_LOGI(TAG, "Checking for GT911 Touch Controller");
+    if ((ret = gt911_i2c_read(dev_addr, GT911_PRODUCT_ID1, &data_buf, 1) != ESP_OK)) {
+        ESP_LOGE(TAG, "Error reading from device: %s",
+                    esp_err_to_name(ret));    // Only show error the first time
+        return;
     }
+
+    // Read 4 bytes for Product ID in ASCII
+    for (int i = 0; i < GT911_PRODUCT_ID_LEN; i++) {
+        gt911_i2c_read(dev_addr, (GT911_PRODUCT_ID1 + i), (uint8_t *)&(gt911_status.product_id[i]), 1);
+    }
+    ESP_LOGI(TAG, "\tProduct ID: %s", gt911_status.product_id);
+
+    gt911_i2c_read(dev_addr, GT911_VENDOR_ID, &data_buf, 1);
+    ESP_LOGI(TAG, "\tVendor ID: 0x%02x", data_buf);
+
+    gt911_i2c_read(dev_addr, GT911_X_COORD_RES_L, &data_buf, 1);
+    gt911_status.max_x_coord = data_buf;
+    gt911_i2c_read(dev_addr, GT911_X_COORD_RES_H, &data_buf, 1);
+    gt911_status.max_x_coord |= ((uint16_t)data_buf << 8);
+    ESP_LOGI(TAG, "\tX Resolution: %d", gt911_status.max_x_coord);
+
+    gt911_i2c_read(dev_addr, GT911_Y_COORD_RES_L, &data_buf, 1);
+    gt911_status.max_y_coord = data_buf;
+    gt911_i2c_read(dev_addr, GT911_Y_COORD_RES_H, &data_buf, 1);
+    gt911_status.max_y_coord |= ((uint16_t)data_buf << 8);
+    ESP_LOGI(TAG, "\tY Resolution: %d", gt911_status.max_y_coord);
+
+    #if CONFIG_LV_GT911_ENABLE_IRQ
+    gpio_config_t irq_config = {
+        .intr_type = GPIO_INTR_DISABLE,
+        .mode = GPIO_MODE_INPUT,
+        .pin_bit_mask = BIT(CONFIG_LV_GT911_IRQ_IO),
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&irq_config));
+    #endif
 }
 
 /**

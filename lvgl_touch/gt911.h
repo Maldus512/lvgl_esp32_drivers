@@ -66,7 +66,6 @@ extern "C" {
 #define GT911_PT1_X_SIZE_H            0x8155
 
 typedef struct {
-    bool inited;
     char product_id[GT911_PRODUCT_ID_LEN];
     uint16_t max_x_coord;
     uint16_t max_y_coord;
